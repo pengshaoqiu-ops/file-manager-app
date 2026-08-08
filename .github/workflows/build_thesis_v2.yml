@@ -1,0 +1,44 @@
+name: Build Thesis DOCX V2
+on:
+  push:
+    paths:
+      - 'build_v2/**'
+      - '.github/workflows/build_thesis_v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc unzip
+          python -m pip install --upgrade pip
+          pip install python-docx
+      - name: Assemble thesis source
+        run: |
+          cat build_v2/thesis_a.md build_v2/thesis_b.md build_v2/thesis_c.md > build_v2/thesis_all.md
+      - name: Build Word
+        run: |
+          pandoc build_v2/thesis_all.md --from=gfm --to=docx -o latest_thesis_raw.docx
+          python build_v2/format_docx.py
+      - name: Prepare DOCX package as artifact root
+        run: |
+          rm -rf pkg && mkdir pkg
+          cd pkg
+          unzip -q ../latest_thesis_final.docx
+          cd ..
+      - name: Upload DOCX-compatible package
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-thesis-docx
+          path: |
+            pkg/[Content_Types].xml
+            pkg/_rels
+            pkg/docProps
+            pkg/word
+          if-no-files-found: error
+          retention-days: 7
